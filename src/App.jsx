@@ -1,158 +1,65 @@
-import React, { useRef, useEffect, useState } from "react";
-import View from "./view";
-import SketchCanvas from "./SketchCanvas";
-import { RiDeleteBin5Fill } from "react-icons/ri";
-import WelcomePage from "./WelcomePage";
+import React, { useState } from 'react';
+import WelcomePage from './WelcomePage';
+import LocationInfo from './components/LocationInfo';
+import NetworkStatus from './components/NetworkStatus';
+import LazyImage from './components/LazyImage';
 
-function App() {
-  const canvasRef = useRef(null);
-  const [location, setLocation] = useState(null);
-  const [locationError, setLocationError] = useState(null);
-  const [note, setNote] = useState("");
-  const [savedNotes, setSavedNotes] = useState([]);
-  const [networkStatus, setNetworkStatus] = useState(navigator.onLine ? "Online" : "Offline");
-  const [selectedNote, setSelectedNote] = useState(null);
+const attractions = [
+  { id: 1, name: 'Attraction 1', desc: 'A beautiful place to visit and explore.', icon: '🏞️' },
+  { id: 2, name: 'Attraction 2', desc: 'A must-see spot for travelers.', icon: '🌅' },
+  { id: 3, name: 'Attraction 3', desc: 'A hidden gem in the city.', icon: '🏰' },
+];
+
+const App = () => {
   const [showWelcome, setShowWelcome] = useState(true);
-
-  // Geolocation API integration
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        (err) => {
-          setLocationError("Location unavailable");
-        }
-      );
-    } else {
-      setLocationError("Geolocation not supported");
-    }
-  }, []);
-
-  // Network Information API
-  useEffect(() => {
-    const updateStatus = () => setNetworkStatus(navigator.onLine ? "Online" : "Offline");
-    window.addEventListener("online", updateStatus);
-    window.addEventListener("offline", updateStatus);
-    return () => {
-      window.removeEventListener("online", updateStatus);
-      window.removeEventListener("offline", updateStatus);
-    };
-  }, []);
-
-  // Load saved notes from localStorage
-  useEffect(() => {
-    const notes = JSON.parse(localStorage.getItem("quick-notes")) || [];
-    setSavedNotes(notes);
-  }, []);
-
-  // Save note and sketch
-  const handleSave = () => {
-    const canvas = canvasRef.current;
-    const image = canvas.toDataURL("image/png");
-    const newNote = {
-      note,
-      image,
-      location,
-      timestamp: new Date().toISOString(),
-    };
-    const updatedNotes = [newNote, ...savedNotes];
-    setSavedNotes(updatedNotes);
-    localStorage.setItem("quick-notes", JSON.stringify(updatedNotes));
-    setNote("");
-    // Clear canvas
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
-  // Delete a note/sketch by index
-  const handleDeleteByIndex = (idx) => {
-    const updatedNotes = savedNotes.filter((_, i) => i !== idx);
-    setSavedNotes(updatedNotes);
-    localStorage.setItem("quick-notes", JSON.stringify(updatedNotes));
-    if (selectedNote && savedNotes[idx] === selectedNote) setSelectedNote(null);
-  };
 
   if (showWelcome) {
     return <WelcomePage onGetStarted={() => setShowWelcome(false)} />;
   }
 
   return (
-    <div className="min-h-screen w-full h-full bg-blue-50 via-white to-indigo-100 flex flex-col p-10 ">
-      <header className="w-full text-center py-8 bg-white/80 shadow-md rounded-3xl ">
-        <h1 className="text-5xl font-extrabold text-blue-800 mb-2 tracking-tight drop-shadow">Quick Note & Sketch Board</h1>
-        <p className="text-lg text-gray-600 font-medium">Jot down notes, sketch ideas, and save them with your location!</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex flex-col">
+      <header className="w-full py-8 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg mb-8">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2 drop-shadow">🌐 Smart Travel Assistant</h1>
+          <p className="text-lg text-blue-100 font-medium">Find attractions, monitor your network, and travel smarter!</p>
+        </div>
       </header>
-      <main className="flex-1 w-full h-full flex flex-col px-0 py-0">
-        <div className="w-full flex flex-col md:flex-row gap-0 items-stretch justify-stretch">
-          <textarea
-            className="flex-1 min-w-0 h-[60vh] p-4 rounded-2xl border-2 border-blue-200 shadow-lg resize-none text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-            placeholder="Write your note here..."
-            value={note}
-            onChange={e => setNote(e.target.value)}
-          />
-          <SketchCanvas ref={canvasRef} heightVh={60} />
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <LocationInfo />
+          <NetworkStatus />
         </div>
-        <div className="w-full flex flex-col items-center gap-2 mt-4">
-          <div className="text-base text-gray-700 font-medium">
-            {location && (
-              <span>Location: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</span>
-            )}
-            {locationError && (
-              <span className="text-red-500">{locationError}</span>
-            )}
-          </div>
-        </div>
-        <div className="w-full flex flex-col sm:flex-row gap-4 items-center justify-between px-4 mt-2">
-          <button
-            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-8 py-3 rounded-xl font-semibold text-lg shadow-md hover:from-blue-600 hover:to-indigo-600 transition-all"
-            onClick={handleSave}
-            disabled={!note && !canvasRef.current}
-          >
-            Save Note & Sketch
-          </button>
-          <div className="text-base text-gray-500 font-medium">Network status: <span className={networkStatus === "Online" ? "text-green-600" : "text-red-600"}>{networkStatus}</span></div>
-        </div>
-        <section className="w-full mt-10 px-4">
-          <h2 className="text-2xl font-bold mb-5 text-blue-700">Saved Notes & Sketches</h2>
-          <div className="flex flex-col gap-4">
-            {savedNotes.length === 0 && (
-              <div className="bg-white/90 rounded-xl shadow p-6 min-h-[80px] text-gray-400 border border-gray-200">No notes or sketches yet.</div>
-            )}
-            {savedNotes.map((item, idx) => (
+        <section className="bg-gradient-to-br from-blue-100 via-white to-indigo-50 rounded-3xl shadow-inner p-6 md:p-10 mb-8 border border-blue-100">
+          <h2 className="text-2xl font-bold text-blue-700 mb-6 flex items-center gap-2">
+            <span role="img" aria-label="attractions">📍</span> Nearby Attractions
+          </h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {attractions.map((attr, i) => (
               <div
-                key={idx}
-                className="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row gap-4 border border-gray-200 cursor-pointer hover:ring-2 hover:ring-blue-400 transition relative"
-                onClick={() => setSelectedNote(item)}
+                key={attr.id}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden border border-blue-200 hover:ring-4 hover:ring-blue-300 hover:scale-105 transition-transform duration-200 relative group"
               >
-                <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-600 p-2 rounded-full focus:outline-none z-10"
-                  title="Delete this note/sketch"
-                  onClick={e => { e.stopPropagation(); handleDeleteByIndex(idx); }}
-                >
-                  <RiDeleteBin5Fill className="text-2xl"/>
-
-                </button>
-                <div className="flex-1 mt-5 ml-5">
-                  <div className="text-gray-800 text-lg mb-2">{item.note || <span className="italic text-gray-400">(No note)</span>}</div>
-                  <div className="text-sm text-gray-500 mb-1">{item.location ? `Location: ${item.location.lat.toFixed(5)}, ${item.location.lng.toFixed(5)}` : "Location: Unknown"}</div>
-                  <div className="text-xs text-gray-400">{new Date(item.timestamp).toLocaleString()}</div>
+                <div className="absolute top-3 left-3 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-lg font-bold shadow group-hover:bg-blue-200 transition">
+                  {attr.icon}
                 </div>
-                <div className="flex-shrink-0 w-full md:w-48 h-32 flex items-center justify-center">
-                  <img src={item.image} alt="Sketch" className="max-w-full max-h-full rounded border" />
+                <LazyImage src={`https://picsum.photos/300/200?random=${i + 1}`} alt={attr.name} />
+                <div className="p-4 pt-6">
+                  <h3 className="font-semibold text-lg text-gray-800 mb-1 flex items-center gap-2">
+                    {attr.name}
+                  </h3>
+                  <p className="text-gray-500 text-sm">{attr.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </section>
       </main>
-      {selectedNote && <View note={selectedNote} onClose={() => setSelectedNote(null)} onDelete={handleDeleteByIndex} />}
+      <footer className="w-full py-4 mt-10 text-center text-gray-400 text-sm">
+        © {new Date().getFullYear()} Smart Travel Assistant — “Travel far, travel wide, travel smart.”
+      </footer>
     </div>
   );
-}
+};
 
 export default App;
